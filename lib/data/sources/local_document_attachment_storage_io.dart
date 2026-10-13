@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,7 +12,8 @@ DocumentAttachmentStorage createLocalDocumentAttachmentStorage() =>
 class _IoDocumentAttachmentStorage implements DocumentAttachmentStorage {
   @override
   Future<StoredDocumentFile> copyIntoApp({
-    required String sourcePath,
+    String? sourcePath,
+    Uint8List? bytes,
     required String documentId,
     required String originalName,
   }) async {
@@ -27,8 +29,15 @@ class _IoDocumentAttachmentStorage implements DocumentAttachmentStorage {
     final destination =
         '${attachmentDirectory.path}${Platform.pathSeparator}'
         '$documentId-${DateTime.now().microsecondsSinceEpoch}-$safeName';
-    final copied = await File(sourcePath).copy(destination);
-    return StoredDocumentFile(name: safeName, path: copied.path);
+    if (sourcePath == null && bytes == null) {
+      throw ArgumentError('Either a source path or file bytes are required.');
+    }
+    if (sourcePath != null) {
+      await File(sourcePath).copy(destination);
+    } else {
+      await File(destination).writeAsBytes(bytes!, flush: true);
+    }
+    return StoredDocumentFile(name: safeName, path: destination);
   }
 
   @override

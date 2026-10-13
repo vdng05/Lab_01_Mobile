@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 
 import '../domain/entities/study_document.dart';
+import '../domain/repositories/document_sharing_repository.dart';
 import '../domain/use_cases/study_document_use_cases.dart';
 
 class StudyDocumentController extends ChangeNotifier {
-  StudyDocumentController(this._useCases);
+  StudyDocumentController(this._useCases, {this.sharingRepository});
 
   final StudyDocumentUseCases _useCases;
+  final DocumentSharingRepository? sharingRepository;
   List<StudyDocument> _documents = [];
   String _query = '';
   DocumentCategory? _category;
@@ -29,8 +31,9 @@ class StudyDocumentController extends ChangeNotifier {
     notifyListeners();
     try {
       _documents = await _useCases.loadDocuments();
-    } catch (_) {
-      errorMessage = 'Không thể tải kho tài liệu. Vui lòng thử lại.';
+    } catch (e, stack) {
+      debugPrint('StudyDocumentController.load error: $e\n$stack');
+      errorMessage = 'Không thể tải kho tài liệu: $e';
     } finally {
       isLoading = false;
       notifyListeners();
@@ -57,6 +60,7 @@ class StudyDocumentController extends ChangeNotifier {
     String semester = '',
     List<String> tags = const [],
     String? attachmentSourcePath,
+    Uint8List? attachmentBytes,
     String? attachmentFileName,
   }) => _perform(() async {
     await _useCases.addDocument(
@@ -69,6 +73,7 @@ class StudyDocumentController extends ChangeNotifier {
       semester: semester,
       tags: tags,
       attachmentSourcePath: attachmentSourcePath,
+      attachmentBytes: attachmentBytes,
       attachmentFileName: attachmentFileName,
     );
     _documents = await _useCases.loadDocuments();
@@ -77,11 +82,13 @@ class StudyDocumentController extends ChangeNotifier {
   Future<bool> updateDocument(
     StudyDocument document, {
     String? attachmentSourcePath,
+    Uint8List? attachmentBytes,
     String? attachmentFileName,
   }) => _perform(() async {
     await _useCases.updateDocument(
       document,
       attachmentSourcePath: attachmentSourcePath,
+      attachmentBytes: attachmentBytes,
       attachmentFileName: attachmentFileName,
     );
     _documents = await _useCases.loadDocuments();
@@ -100,16 +107,48 @@ class StudyDocumentController extends ChangeNotifier {
     }
   }
 
+  Future<SharedDocumentUser?> shareDocument({
+    required String documentId,
+    required String email,
+    required DocumentAccessLevel accessLevel,
+  }) async {
+    final repository = sharingRepository;
+    if (repository == null) return null;
+    try {
+      errorMessage = null;
+      final sharedUser = await repository.shareDocument(
+        documentId: documentId,
+        email: email,
+        accessLevel: accessLevel,
+      );
+      notifyListeners();
+      return sharedUser;
+    } catch (e) {
+      debugPrint('shareDocument error: $e');
+      final msg = e.toString();
+      if (msg.contains('chính mình')) {
+        errorMessage = 'Bạn không thể tự chia sẻ tài liệu cho chính mình.';
+      } else if (msg.contains('chủ sở hữu')) {
+        errorMessage = 'Chỉ người tạo tài liệu mới có quyền chia sẻ tài liệu này.';
+      } else {
+        errorMessage = 'Không thể chia sẻ: $e';
+      }
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<bool> _perform(Future<void> Function() action) async {
     errorMessage = null;
     try {
       await action();
       notifyListeners();
       return true;
-    } catch (_) {
-      errorMessage = 'Thao tác chưa hoàn tất. Vui lòng thử lại.';
+    } catch (error) {
+      debugPrint('StudyDocumentController error: $error');
+      errorMessage = 'Thao tác chưa hoàn tất: $error';
       notifyListeners();
-      return false;
+      rethrow;
     }
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class StoredDocumentFile {
   const StoredDocumentFile({required this.name, required this.path});
 
@@ -7,7 +9,8 @@ class StoredDocumentFile {
 
 abstract interface class DocumentAttachmentStorage {
   Future<StoredDocumentFile> copyIntoApp({
-    required String sourcePath,
+    String? sourcePath,
+    Uint8List? bytes,
     required String documentId,
     required String originalName,
   });

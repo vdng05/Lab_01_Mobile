@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -14,6 +16,7 @@ class DocumentFormValues {
     required this.semester,
     required this.tags,
     required this.attachmentSourcePath,
+    required this.attachmentBytes,
     required this.attachmentFileName,
   });
 
@@ -26,6 +29,7 @@ class DocumentFormValues {
   final String semester;
   final List<String> tags;
   final String? attachmentSourcePath;
+  final Uint8List? attachmentBytes;
   final String? attachmentFileName;
 }
 
@@ -63,6 +67,7 @@ class _DocumentFormDialogState extends State<DocumentFormDialog> {
   bool _saving = false;
   String? _error;
   String? _pickedFilePath;
+  Uint8List? _pickedFileBytes;
   String? _pickedFileName;
 
   @override
@@ -161,7 +166,11 @@ class _DocumentFormDialogState extends State<DocumentFormDialog> {
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
                   key: const Key('pickDocumentFile'),
-                  onPressed: _saving ? null : _pickFile,
+                  onPressed:
+                      _saving ||
+                          (widget.document != null && !widget.document!.isOwner)
+                      ? null
+                      : _pickFile,
                   icon: const Icon(Icons.attach_file),
                   label: const Text('Chọn file từ thiết bị'),
                 ),
@@ -227,14 +236,19 @@ class _DocumentFormDialogState extends State<DocumentFormDialog> {
       );
       if (result.isEmpty || !mounted) return;
       final file = result.single;
-      if (file.path == null) {
-        setState(
-          () => _error = 'Nền tảng này không cung cấp đường dẫn file cục bộ.',
-        );
+      final fileLength = await file.length();
+      if (fileLength != null && fileLength > 25 * 1024 * 1024) {
+        setState(() => _error = 'File phải nhỏ hơn hoặc bằng 25 MiB.');
+        return;
+      }
+      final bytes = await file.readAsBytes();
+      if (bytes.length > 25 * 1024 * 1024) {
+        setState(() => _error = 'File phải nhỏ hơn hoặc bằng 25 MiB.');
         return;
       }
       setState(() {
         _pickedFilePath = file.path;
+        _pickedFileBytes = bytes;
         _pickedFileName = file.name;
         _error = null;
       });
@@ -249,27 +263,36 @@ class _DocumentFormDialogState extends State<DocumentFormDialog> {
       _saving = true;
       _error = null;
     });
-    final saved = await widget.onSave(
-      DocumentFormValues(
-        title: _title.text,
-        course: _course.text,
-        category: _category,
-        description: _description.text,
-        link: _link.text,
-        author: _author.text,
-        semester: _semester.text,
-        tags: _tags.text.split(',').map((tag) => tag.trim()).toList(),
-        attachmentSourcePath: _pickedFilePath,
-        attachmentFileName: _pickedFileName,
-      ),
-    );
-    if (!mounted) return;
-    if (saved) {
-      Navigator.pop(context);
-    } else {
+    try {
+      final saved = await widget.onSave(
+        DocumentFormValues(
+          title: _title.text,
+          course: _course.text,
+          category: _category,
+          description: _description.text,
+          link: _link.text,
+          author: _author.text,
+          semester: _semester.text,
+          tags: _tags.text.split(',').map((tag) => tag.trim()).toList(),
+          attachmentSourcePath: _pickedFilePath,
+          attachmentBytes: _pickedFileBytes,
+          attachmentFileName: _pickedFileName,
+        ),
+      );
+      if (!mounted) return;
+      if (saved) {
+        Navigator.pop(context);
+      } else {
+        setState(() {
+          _saving = false;
+          _error = 'Không thể lưu tài liệu. Kiểm tra thông tin hoặc thử lại.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = 'Không thể lưu tài liệu. Vui lòng thử lại.';
+        _error = 'Lỗi: ${e.toString().replaceAll('Exception: ', '')}';
       });
     }
   }

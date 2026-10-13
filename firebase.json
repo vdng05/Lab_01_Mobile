@@ -1,0 +1,29 @@
+{
+	"flutter": {
+		"platforms": {
+			"android": {
+				"default": {
+					"projectId": "my-docs-manager-9cdf8",
+					"appId": "1:422430527001:android:032c3636b35059b13fe488",
+					"fileOutput": "android/app/google-services.json"
+				}
+			},
+			"dart": {
+				"lib/firebase_options.dart": {
+					"projectId": "my-docs-manager-9cdf8",
+					"configurations": {
+						"android": "1:422430527001:android:032c3636b35059b13fe488",
+						"web": "1:422430527001:web:1cec2742904d17c33fe488",
+						"windows": "1:422430527001:web:5b4cdfa27e50bb3a3fe488"
+					}
+				}
+			}
+		}
+	},
+	"storage": {
+		"rules": "firebase/storage.rules"
+	},
+	"functions": {
+		"source": "functions"
+	}
+}

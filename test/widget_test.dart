@@ -10,12 +10,16 @@
 // find widgets in the widget tree, read properties of widgets, and verify the
 // values of widget properties.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lab_01/app/study_library_app.dart';
 import 'package:lab_01/application/study_document_controller.dart';
 import 'package:lab_01/domain/entities/study_document.dart';
+import 'package:lab_01/domain/entities/study_user.dart';
+import 'package:lab_01/domain/repositories/authentication_repository.dart';
 import 'package:lab_01/domain/use_cases/study_document_use_cases.dart';
 
 import 'support/memory_repositories.dart';
@@ -93,4 +97,71 @@ void main() {
     expect(attachmentStorage.openedFiles, [document.attachmentPath]);
     expect(find.text('Đã mở file bằng ứng dụng mặc định.'), findsOneWidget);
   });
+
+  testWidgets('local mode exposes Google sign-in and the profile page', (
+    tester,
+  ) async {
+    final controller = StudyDocumentController(
+      StudyDocumentUseCases(MemoryStudyDocumentRepository()),
+    );
+    final authentication = _MemoryAuthenticationRepository();
+    addTearDown(controller.dispose);
+    addTearDown(authentication.dispose);
+
+    await tester.pumpWidget(
+      StudyLibraryApp(
+        controller: controller,
+        authenticationRepository: authentication,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Đăng nhập bằng Google'), findsOneWidget);
+    expect(find.textContaining('Đang dùng dữ liệu cục bộ'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Đăng nhập bằng Google'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('openProfile')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('openProfile')));
+    await tester.pumpAndSettle();
+    expect(find.text('Thông tin cá nhân'), findsOneWidget);
+    expect(find.text('student@example.test'), findsOneWidget);
+    expect(find.textContaining('Dữ liệu tài liệu vẫn đang lưu'), findsOneWidget);
+  });
+}
+
+class _MemoryAuthenticationRepository implements AuthenticationRepository {
+  final _authChanges = StreamController<StudyUser?>.broadcast();
+  StudyUser? _user;
+
+  @override
+  StudyUser? get currentUser => _user;
+
+  @override
+  Stream<StudyUser?> authStateChanges() async* {
+    yield _user;
+    yield* _authChanges.stream;
+  }
+
+  @override
+  Future<StudyUser?> signInWithGoogle() async {
+    _user = const StudyUser(
+      id: 'firebase-test-user',
+      email: 'student@example.test',
+      displayName: 'Test Student',
+      photoUrl: '',
+      emailVerified: true,
+    );
+    _authChanges.add(_user);
+    return _user;
+  }
+
+  @override
+  Future<void> signOut() async {
+    _user = null;
+    _authChanges.add(null);
+  }
+
+  Future<void> dispose() => _authChanges.close();
 }

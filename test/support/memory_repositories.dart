@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:lab_01/data/sources/local_document_data_source.dart';
 import 'package:lab_01/domain/entities/study_document.dart';
 import 'package:lab_01/domain/repositories/document_attachment_storage.dart';
@@ -43,12 +45,13 @@ class MemoryDocumentAttachmentStorage implements DocumentAttachmentStorage {
 
   @override
   Future<StoredDocumentFile> copyIntoApp({
-    required String sourcePath,
+    String? sourcePath,
+    Uint8List? bytes,
     required String documentId,
     required String originalName,
   }) async {
     final destination = '/app/attachments/$documentId-$originalName';
-    storedFiles[destination] = sourcePath;
+    storedFiles[destination] = sourcePath ?? 'bytes:${bytes?.length ?? 0}';
     return StoredDocumentFile(name: originalName, path: destination);
   }
 

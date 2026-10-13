@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 /Lab_01_Mobile/
+/functions/node_modules/
+/functions/lib/
+/functions/.env*
 
 # IntelliJ related
 *.iml

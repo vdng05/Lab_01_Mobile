@@ -1,14 +1,17 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lab_01/data/sources/local_document_data_source.dart';
 import 'package:lab_01/data/repositories/local_study_document_repository.dart';
 import 'package:lab_01/domain/entities/study_document.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import '../support/memory_repositories.dart';
 
 void main() {
   test('first launch seeds five samples per category only once', () async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    addTearDown(() => SharedPreferencesAsyncPlatform.instance = null);
     final source = SharedPreferencesDocumentDataSource();
 
     final initialDocuments = await source.readDocuments();

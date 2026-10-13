@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../entities/study_document.dart';
 import '../repositories/document_attachment_storage.dart';
 import '../repositories/study_document_repository.dart';
@@ -5,13 +7,15 @@ import '../repositories/study_document_repository.dart';
 class StudyDocumentUseCases {
   StudyDocumentUseCases(
     this._repository, {
-    DocumentAttachmentStorage? attachmentStorage,
-  }) : _attachmentStorage = attachmentStorage;
+    this.attachmentStorage,
+    this.ownerId = '',
+  });
 
   static int _idSequence = 0;
 
   final StudyDocumentRepository _repository;
-  final DocumentAttachmentStorage? _attachmentStorage;
+  final DocumentAttachmentStorage? attachmentStorage;
+  final String ownerId;
 
   Future<List<StudyDocument>> loadDocuments() async {
     final documents = await _repository.getAll();
@@ -28,6 +32,7 @@ class StudyDocumentUseCases {
     String semester = '',
     List<String> tags = const [],
     String? attachmentSourcePath,
+    Uint8List? attachmentBytes,
     String? attachmentFileName,
   }) async {
     _validate(title, course);
@@ -35,6 +40,7 @@ class StudyDocumentUseCases {
     final id = '${now.microsecondsSinceEpoch}-${_idSequence++}';
     final storedFile = await _copyAttachment(
       sourcePath: attachmentSourcePath,
+      bytes: attachmentBytes,
       documentId: id,
       fileName: attachmentFileName,
     );
@@ -46,6 +52,7 @@ class StudyDocumentUseCases {
       description: description.trim(),
       link: link.trim(),
       updatedAt: now,
+      ownerId: ownerId,
       author: author.trim(),
       semester: semester.trim(),
       tags: _normalizeTags(tags),
@@ -57,7 +64,7 @@ class StudyDocumentUseCases {
       return document;
     } catch (_) {
       if (storedFile != null) {
-        await _attachmentStorage!.deleteStoredFile(storedFile.path);
+        await attachmentStorage!.deleteStoredFile(storedFile.path);
       }
       rethrow;
     }
@@ -66,6 +73,7 @@ class StudyDocumentUseCases {
   Future<StudyDocument> updateDocument(
     StudyDocument document, {
     String? attachmentSourcePath,
+    Uint8List? attachmentBytes,
     String? attachmentFileName,
   }) async {
     _validate(document.title, document.course);
@@ -75,6 +83,7 @@ class StudyDocumentUseCases {
     }
     final storedFile = await _copyAttachment(
       sourcePath: attachmentSourcePath,
+      bytes: attachmentBytes,
       documentId: document.id,
       fileName: attachmentFileName,
     );
@@ -94,31 +103,33 @@ class StudyDocumentUseCases {
       await _repository.save(updated);
     } catch (_) {
       if (storedFile != null) {
-        await _attachmentStorage!.deleteStoredFile(storedFile.path);
+        await attachmentStorage!.deleteStoredFile(storedFile.path);
       }
       rethrow;
     }
     if (storedFile != null && document.attachmentPath.isNotEmpty) {
-      await _attachmentStorage!.deleteStoredFile(document.attachmentPath);
+      await attachmentStorage!.deleteStoredFile(document.attachmentPath);
     }
     return updated;
   }
 
   Future<StoredDocumentFile?> _copyAttachment({
-    required String? sourcePath,
+    String? sourcePath,
+    Uint8List? bytes,
     required String documentId,
     required String? fileName,
   }) async {
-    if (sourcePath == null) return null;
+    if (sourcePath == null && bytes == null) return null;
     if (fileName == null || fileName.isEmpty) {
       throw const FormatException('Tên file đính kèm không hợp lệ.');
     }
-    final storage = _attachmentStorage;
+    final storage = attachmentStorage;
     if (storage == null) {
       throw StateError('Chưa cấu hình nơi lưu file đính kèm.');
     }
     return storage.copyIntoApp(
       sourcePath: sourcePath,
+      bytes: bytes,
       documentId: documentId,
       originalName: fileName,
     );
@@ -135,12 +146,12 @@ class StudyDocumentUseCases {
     final document = documents.where((item) => item.id == id).firstOrNull;
     await _repository.delete(id);
     if (document != null && document.attachmentPath.isNotEmpty) {
-      await _attachmentStorage?.deleteStoredFile(document.attachmentPath);
+      await attachmentStorage?.deleteStoredFile(document.attachmentPath);
     }
   }
 
   Future<bool> openAttachment(String path) async {
-    final storage = _attachmentStorage;
+    final storage = attachmentStorage;
     if (storage == null || path.isEmpty) return false;
     return storage.openStoredFile(path);
   }

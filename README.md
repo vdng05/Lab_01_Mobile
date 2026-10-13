@@ -1,6 +1,12 @@
-# lab_01
+# Cashew Study Library
 
-A new Flutter project.
+Ứng dụng Flutter quản lý tài liệu học tập. Có local mode với SharedPreferences và cloud mode dùng Firebase Authentication/Storage cùng Supabase metadata/RLS.
+
+## Tài liệu
+
+- [Báo cáo so sánh hiện trạng với phương án Azure trước đây](docs/cloud-integration-analysis.md)
+- [Thiết lập Firebase/Supabase và kiểm thử quyền](docs/firebase-supabase-setup.md)
+- [Hướng dẫn Flutter](https://docs.flutter.dev/)
 
 ## Getting Started
 

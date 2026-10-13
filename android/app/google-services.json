@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "422430527001",
+    "project_id": "my-docs-manager-9cdf8",
+    "storage_bucket": "my-docs-manager-9cdf8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:422430527001:android:032c3636b35059b13fe488",
+        "android_client_info": {
+          "package_name": "com.example.lab_01"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "422430527001-mp9v8h85jf23kq7gqemsu0f4ui8srkj5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADfmwXiOM6MyrQQ-LrnmS8LxxH3oFMuf0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "422430527001-mp9v8h85jf23kq7gqemsu0f4ui8srkj5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
